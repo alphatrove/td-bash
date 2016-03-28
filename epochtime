@@ -1,0 +1,76 @@
+#!/bin/bash
+# ############################################################
+     NAME_="epochtime"
+     HTML_="epochtime bash/awk"
+  PURPOSE_="epochtime from stdin/cat"
+REQRUIRES_="GNU"
+  VERSION_="1.0"
+   AUTHOR_="jjg <jjg@ulcernation.com>"
+     REPO_="fin"
+     REPO_="src"
+      LIB_="fin"
+    SHELL_="bash"
+# ############################################################
+TZ=America/Chicago
+usage() {
+cat << EOF
+usage: $0 options TIME
+	TIME - either an epoch time or a full time string
+	- epoch time, time in seconds from 1/1/1970 (may include fractional seconds after decimal points)
+	- time string "yyyy-mm-dd HH:MM:SS.ssssss" as a single string (must have dashes)
+	NOTE: TZ=$TZ
+	$0 epochtime "2012-12-21 10:00:00"      => 1356105600.000000     
+	$0 epochtime 1356105600                 => 2012-12-21 10:00:00
+	$0 epochtime 1356105600.25              => 2012-12-21 10:00:00.25
+        -h      help, show this message
+        -v      verbose
+EOF
+}
+
+############################################################
+#  cmdline
+HHMM=0
+while getopts Hhc: OPTION; do case $OPTION in
+	h)	usage; exit 1; ;;
+	H)	HHMM=1 ; ;;
+	c)	CATEGORY=$OPTARG; ;;
+esac ; done
+shift $(( $OPTIND -1 ))
+CMDARGS_REMAINING=$0
+ARG=$1
+
+if [[ $ARG =~ ^[0-9]{8,9} ]]; then  # regex to match epoch time then convert epoch time to time string
+	echo $ARG \
+	| sed 's/\./ /' \
+	| TZ=$TZ gawk \
+		-v hhmm=$HHMM \
+	'{ 
+		if (hhmm) { print strftime("%H%M", $1); exit; }
+		tstr=strftime("%Y-%m-%d %H:%M:%S", $1); 
+		if ($2) print tstr "." $2; 
+		else print tstr }'
+else
+	echo $ARG \
+	| TZ=$TZ gawk -F "[:, ]" '{
+                year    = int( substr($1, 1, 4) )
+                month   = int( substr($1, 6, 2) )
+                day     = int( substr($1, 9, 2) )
+                hour    = int($2)
+                minute  = int($3)
+                fsecond = int($4)
+                second  = int($4)
+                msecond = fsecond - second
+		day_offset = 0
+
+		if (hour<0) {
+			hour = -hour
+			day_offset = -1
+		}
+
+                epoch  = mktime(year " " month " " day " " hour " " minute " " second) + msecond * 1.0E-6
+		epoch += day_offset * 86400
+
+		print epoch
+        }'
+fi
+

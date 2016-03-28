@@ -1,0 +1,5 @@
+EXEMODE = 775 ;
+
+InstallBin /opt/local/bin : epochtime ;
+InstallBin /opt/local/bin : daterange ;
+

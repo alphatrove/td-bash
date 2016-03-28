@@ -1,0 +1,48 @@
+#!/bin/bash
+############################################################
+# source/scripts
+# (c) jjg 2012
+############################################################
+usage() {
+cat << EOF
+usage: $0 options DATE1,DATE2
+	generate a list of dates from DATE1 to DATE2
+	-h      Show this message
+	-w	skip weekends
+	$0 20120801,20120831
+EOF
+}
+
+############################################################
+#
+SKIP_WEEKENDS=0
+while getopts hw OPTION; do case $OPTION in
+        h)	usage; exit 1; ;;
+	w)	SKIP_WEEKENDS=1 ; ;;
+esac ; done
+shift $(( $OPTIND -1 ))
+CMDARGS_REMAINING=$@
+MIN_ARG=1
+if [[ $# -lt $MIN_ARG ]] ; then echo missing arguments, MIN_ARG=$MIN_ARG ; exit 1 ; fi
+DATES=$1
+DATE1=$( echo $DATES | cut -d, -f1 )
+DATE2=$( echo $DATES | cut -d, -f2 )
+
+echo $DATE1 $DATE2 \
+| TZ=$TZ /usr/local/bin/gawk -v skip_weekends=$SKIP_WEEKENDS '{
+	year1  = substr( $1, 1, 4 )
+	month1 = substr( $1, 5, 2 )
+	day1   = substr( $1, 7, 2 )
+	year2  = substr( $2, 1, 4 )
+	month2 = substr( $2, 5, 2 )
+	day2   = substr( $2, 7, 2 )
+	epoch1 = mktime( year1 " " month1 " " day1 " 12 0 0" )
+	epoch2 = mktime( year2 " " month2 " " day2 " 12 0 0" ) + 72000
+	epoch  = epoch1
+	while ( epoch < epoch2 ) {
+		wkday = int(strftime( "%u", epoch ))
+		if ( ! skip_weekends || wkday < 6 ) print strftime( "%Y%m%d", epoch )
+		epoch += 86400
+	}
+}'
+
